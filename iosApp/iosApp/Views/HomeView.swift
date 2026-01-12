@@ -88,7 +88,7 @@ struct HomeView: View {
         VStack(spacing: 12) {
             InfoCard(
                 title: "User ID",
-                value: viewModel.currentUser?.id ?? "N/A",
+                value: viewModel.currentUser?.uid ?? "N/A",
                 icon: "person.fill"
             )
 

@@ -12,7 +12,6 @@ import com.example.firebaseauth.domain.usecase.SignUpUseCase
 
 /**
  * Simple Service Locator for dependency injection.
- * In a production app, you might use Koin or similar DI framework.
  */
 object ServiceLocator {
 

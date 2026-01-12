@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Expected Firebase Auth service declaration.
- * Each platform provides its own implementation.
  */
 expect class FirebaseAuthService() {
     /**
