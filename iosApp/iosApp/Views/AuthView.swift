@@ -60,14 +60,13 @@ struct AuthView: View {
 
     private var headerSection: some View {
         VStack(spacing: 10) {
-            Image(systemName: "flame.fill")
+            Text("🇳🇵")
                 .font(.system(size: 60))
-                .foregroundColor(.white)
 
             Text(isSignUpMode ? "Create Account" : "Welcome Back")
                 .font(.largeTitle)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
 
             Text(isSignUpMode ? "Sign up to get started" : "Sign in to continue")
                 .font(.subheadline)

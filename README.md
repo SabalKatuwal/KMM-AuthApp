@@ -12,6 +12,13 @@ A Kotlin Multiplatform Mobile (KMM) application demonstrating Firebase Authentic
 - ✅ Clean Architecture with domain, data, and presentation layers
 - ✅ Platform-agnostic business logic in shared KMM module
 
+## Demo
+
+<p align="center">
+  <img src="media/demo.gif" alt="App Demo" width="300">
+</p>
+
+
 ## Project Structure
 
 ```

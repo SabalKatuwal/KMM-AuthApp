@@ -1,7 +1,6 @@
 import Foundation
 import FirebaseAuth
 
-/// Native Swift AuthUser model
 struct SwiftAuthUser {
     let uid: String
     let email: String?
@@ -11,14 +10,13 @@ struct SwiftAuthUser {
     let isAnonymous: Bool
 }
 
-/// Native Swift AuthState enum
 enum SwiftAuthState {
     case loading
     case authenticated(user: SwiftAuthUser)
     case unauthenticated
 }
 
-/// Native Swift AuthResult enum
+/// enum with Generics
 enum SwiftAuthResult<T> {
     case success(T)
     case error(String)
@@ -66,7 +64,6 @@ class FirebaseAuthManager: ObservableObject {
 
     func observeAuthState(callback: @escaping (SwiftAuthState) -> Void) {
         self.authStateCallback = callback
-        // Immediately call with current state
         callback(currentAuthState)
     }
 
@@ -74,6 +71,7 @@ class FirebaseAuthManager: ObservableObject {
         Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
             DispatchQueue.main.async {
                 if let error = error {
+                    print("signUpError: \(error)")
                     completion(.error(self.mapFirebaseError(error)))
                     return
                 }
@@ -82,7 +80,7 @@ class FirebaseAuthManager: ObservableObject {
                     completion(.error("User creation failed"))
                     return
                 }
-
+                print("returned user from delegate: \(user)")
                 completion(.success(user.toSwiftAuthUser()))
             }
         }
@@ -158,7 +156,7 @@ class FirebaseAuthManager: ObservableObject {
     }
 }
 
-// Extension to convert Firebase User to SwiftAuthUser
+// Extension to convert Firebase User to SwiftAuthUser just to map
 extension User {
     func toSwiftAuthUser() -> SwiftAuthUser {
         return SwiftAuthUser(

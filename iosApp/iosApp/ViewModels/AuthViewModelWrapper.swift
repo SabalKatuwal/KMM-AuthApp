@@ -4,16 +4,17 @@ import Combine
 @MainActor
 class AuthViewModelWrapper: ObservableObject {
 
-    // Published properties that SwiftUI views can observe
+    @Published var shouldNavigate: Bool = false
     @Published var isLoading: Bool = false
     @Published var isAuthenticated: Bool = false
     @Published var currentUser: SwiftAuthUser? = nil
     @Published var errorMessage: String? = nil
 
     // The auth manager handles all Firebase operations
-    private let authManager = FirebaseAuthManager.shared
+    private let authManager: FirebaseAuthManager
 
-    init() {
+    init(authManager: FirebaseAuthManager = FirebaseAuthManager.shared) {
+        self.authManager = authManager
         startObserving()
     }
 
@@ -32,6 +33,7 @@ class AuthViewModelWrapper: ObservableObject {
         case .loading:
             self.isLoading = true
         case .authenticated(let user):
+            print(user)
             self.isLoading = false
             self.isAuthenticated = true
             self.currentUser = user
@@ -53,6 +55,7 @@ class AuthViewModelWrapper: ObservableObject {
             self?.isLoading = false
             switch result {
             case .success(let user):
+                print(user)
                 self?.isAuthenticated = true
                 self?.currentUser = user
             case .error(let message):
@@ -72,9 +75,11 @@ class AuthViewModelWrapper: ObservableObject {
             self?.isLoading = false
             switch result {
             case .success(let user):
+                print(user)
                 self?.isAuthenticated = true
                 self?.currentUser = user
             case .error(let message):
+                print("LoginError is: \(message)")
                 self?.errorMessage = message
             case .loading:
                 break
