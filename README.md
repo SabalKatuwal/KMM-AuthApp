@@ -4,13 +4,13 @@ A Kotlin Multiplatform Mobile (KMM) application demonstrating Firebase Authentic
 
 ## Features
 
-- ✅ Email & password sign-up
-- ✅ Email & password login
-- ✅ Logout functionality
-- ✅ Google Sign-In
-- ✅ Authentication state observation (logged in / logged out)
-- ✅ Clean Architecture with domain, data, and presentation layers
-- ✅ Platform-agnostic business logic in shared KMM module
+- Email & password sign-up
+- Email & password login
+- Logout functionality
+- Google Sign-In
+- Authentication state observation (logged in / logged out)
+- Clean Architecture with domain, data, and presentation layers
+- Platform-agnostic business logic in shared KMM module
 
 ## Demo
 
@@ -197,58 +197,3 @@ viewModel.signUp(email, password)
 viewModel.login(email, password)
 viewModel.logout()
 ```
-
-## Troubleshooting
-
-### "Multiple commands produce FirebaseAuth.swiftmodule" Error
-This error occurred with the old GitLive Firebase setup. The current architecture uses native Firebase iOS SDK directly, which should not have this issue.
-
-If you still see this error:
-1. In Xcode, go to **File** > **Packages** > **Reset Package Caches**
-2. Clean build folder: **Product** > **Clean Build Folder** (⇧⌘K)
-3. Delete DerivedData: `rm -rf ~/Library/Developer/Xcode/DerivedData/iosApp-*`
-4. Rebuild the project
-
-### "Java Runtime not found"
-Install Java JDK:
-```bash
-brew install openjdk@17
-echo 'export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-### "No such module 'Shared'"
-Build the shared framework first by running the app from Xcode. The Xcode build process will automatically invoke Gradle to build the framework.
-
-If you need to build manually for testing:
-```bash
-./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
-```
-
-### "embedAndSignAppleFrameworkForXcode failed" from Terminal
-This error is expected. The `embedAndSignAppleFrameworkForXcode` task must be run from Xcode, not from the terminal. It requires Xcode environment variables.
-
-**Solution:** Simply open the project in Xcode and run the app (⌘R). Xcode will handle everything automatically.
-
-### Google Sign-In not working
-1. Ensure `GoogleService-Info.plist` is added to Xcode project
-2. Check that `REVERSED_CLIENT_ID` is set in Info.plist URL schemes
-3. Verify Google Sign-In is enabled in Firebase Console
-
-### Firebase initialization error
-Make sure `FirebaseApp.configure()` is called in `AppDelegate` before any Firebase operations.
-
----
-
-## Original KMM Project Info
-
-This is a Kotlin Multiplatform project targeting Android, iOS.
-
-* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
-
-* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you're sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
-
-* [/shared](./shared/src) is for the code that will be shared between all targets in the project.
-
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
