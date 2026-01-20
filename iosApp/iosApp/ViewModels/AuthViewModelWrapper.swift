@@ -4,12 +4,6 @@ import Shared
 
 /**
  * Swift wrapper for the shared KMM IOSAuthViewModel.
- *
- * ARCHITECTURE NOTE:
- * - This wraps the shared Kotlin `IOSAuthViewModel` for use in SwiftUI
- * - All business logic is in the shared module, this just bridges to SwiftUI
- * - Uses ObservableObject to integrate with SwiftUI's reactive system
- * - The shared module's Kotlin Flow is converted to Swift callbacks
  */
 @MainActor
 class AuthViewModelWrapper: ObservableObject {

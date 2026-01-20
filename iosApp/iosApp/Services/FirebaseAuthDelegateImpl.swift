@@ -10,7 +10,6 @@ import Shared
  * - This implements the `expect/actual` pattern's iOS side
  * - The shared module defines `FirebaseAuthServiceDelegate` interface
  * - This Swift class implements that interface using Firebase iOS SDK
- * - All business logic stays in the shared module, this just provides Firebase access
  */
 class FirebaseAuthDelegateImpl: NSObject, FirebaseAuthServiceDelegate {
 

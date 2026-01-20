@@ -8,8 +8,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Initialize Firebase
         FirebaseApp.configure()
 
-        // IMPORTANT: Set the Firebase Auth delegate for the shared KMM module
-        // This connects Swift's Firebase SDK to the shared Kotlin business logic
         IOSFirebaseAuth.shared.delegate = FirebaseAuthDelegateImpl.shared
 
         return true
