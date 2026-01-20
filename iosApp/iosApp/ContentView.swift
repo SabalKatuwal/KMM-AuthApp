@@ -1,4 +1,5 @@
 import SwiftUI
+import Shared
 
 /// Main ContentView that handles authentication state and navigation.
 struct ContentView: View {

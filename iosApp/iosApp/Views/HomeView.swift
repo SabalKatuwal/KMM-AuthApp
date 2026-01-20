@@ -1,4 +1,5 @@
 import SwiftUI
+import Shared
 
 /// Home view shown when user is authenticated.
 struct HomeView: View {

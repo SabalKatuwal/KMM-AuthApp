@@ -1,5 +1,6 @@
 import SwiftUI
 import GoogleSignIn
+import Shared
 
 /// Login/Signup View with email and password fields.
 struct AuthView: View {

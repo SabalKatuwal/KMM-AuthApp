@@ -1,38 +1,26 @@
 import Foundation
 import FirebaseAuth
+import Shared
 
-struct SwiftAuthUser {
-    let uid: String
-    let email: String?
-    let displayName: String?
-    let photoUrl: String?
-    let isEmailVerified: Bool
-    let isAnonymous: Bool
-}
+/**
+ * Implementation of FirebaseAuthServiceDelegate from the shared KMM module.
+ * This class bridges Swift Firebase SDK to the shared Kotlin module.
+ *
+ * ARCHITECTURE NOTE:
+ * - This implements the `expect/actual` pattern's iOS side
+ * - The shared module defines `FirebaseAuthServiceDelegate` interface
+ * - This Swift class implements that interface using Firebase iOS SDK
+ * - All business logic stays in the shared module, this just provides Firebase access
+ */
+class FirebaseAuthDelegateImpl: NSObject, FirebaseAuthServiceDelegate {
 
-enum SwiftAuthState {
-    case loading
-    case authenticated(user: SwiftAuthUser)
-    case unauthenticated
-}
-
-/// enum with Generics
-enum SwiftAuthResult<T> {
-    case success(T)
-    case error(String)
-    case loading
-}
-
-class FirebaseAuthManager: ObservableObject {
-
-    static let shared = FirebaseAuthManager()
+    static let shared = FirebaseAuthDelegateImpl()
 
     private var authStateListener: AuthStateDidChangeListenerHandle?
-    private var authStateCallback: ((SwiftAuthState) -> Void)?
+    private var authStateCallback: ((AuthState) -> Void)?
 
-    @Published var currentAuthState: SwiftAuthState = .loading
-
-    private init() {
+    override init() {
+        super.init()
         setupAuthStateListener()
     }
 
@@ -42,124 +30,159 @@ class FirebaseAuthManager: ObservableObject {
         }
     }
 
-    func getCurrentUser() -> SwiftAuthUser? {
-        guard let user = Auth.auth().currentUser else {
+    // MARK: - FirebaseAuthServiceDelegate Implementation
+
+    /// Get the current authenticated user, converting to shared module's AuthUser type.
+    func getCurrentUser() -> AuthUser? {
+        guard let firebaseUser = Auth.auth().currentUser else {
             return nil
         }
-        return user.toSwiftAuthUser()
+        return firebaseUser.toSharedAuthUser()
     }
 
+    /// Setup Firebase auth state listener and notify the shared module via callback.
     private func setupAuthStateListener() {
         authStateListener = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             DispatchQueue.main.async {
+                guard let self = self else { return }
                 if let user = user {
-                    self?.currentAuthState = .authenticated(user: user.toSwiftAuthUser())
+                    // Convert Firebase User to shared AuthUser and create Authenticated state
+                    let authUser = user.toSharedAuthUser()
+                    let state = AuthState.Authenticated(user: authUser)
+                    self.authStateCallback?(state)
                 } else {
-                    self?.currentAuthState = .unauthenticated
+                    // User is not authenticated - use shared singleton
+                    self.authStateCallback?(AuthState.Unauthenticated.shared)
                 }
-                self?.authStateCallback?(self?.currentAuthState ?? .unauthenticated)
             }
         }
     }
 
-    func observeAuthState(callback: @escaping (SwiftAuthState) -> Void) {
+    /// Observe auth state changes - called by the shared module.
+    func observeAuthState(callback: @escaping (AuthState) -> Void) {
         self.authStateCallback = callback
-        callback(currentAuthState)
+
+        // Emit initial state
+        if let user = Auth.auth().currentUser {
+            callback(AuthState.Authenticated(user: user.toSharedAuthUser()))
+        } else {
+            callback(AuthState.Unauthenticated.shared)
+        }
     }
 
-    func signUpWithEmail(email: String, password: String, completion: @escaping (SwiftAuthResult<SwiftAuthUser>) -> Void) {
-        Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
+    /// Sign up with email and password - returns result via callback to shared module.
+    func signUpWithEmail(email: String, password: String, callback: @escaping (Any) -> Void) {
+        Auth.auth().createUser(withEmail: email, password: password) { [weak self] authResult, error in
             DispatchQueue.main.async {
+                guard let self = self else { return }
                 if let error = error {
                     print("signUpError: \(error)")
-                    completion(.error(self.mapFirebaseError(error)))
+                    let authException = self.mapFirebaseErrorToAuthException(error)
+                    callback(AuthResultError(exception: authException))
                     return
                 }
 
                 guard let user = authResult?.user else {
-                    completion(.error("User creation failed"))
+                    callback(AuthResultError(exception: AuthException.Unknown(message: "User creation failed")))
                     return
                 }
+
                 print("returned user from delegate: \(user)")
-                completion(.success(user.toSwiftAuthUser()))
+                callback(AuthResultSuccess(data: user.toSharedAuthUser()))
             }
         }
     }
 
-    func loginWithEmail(email: String, password: String, completion: @escaping (SwiftAuthResult<SwiftAuthUser>) -> Void) {
-        Auth.auth().signIn(withEmail: email, password: password) { authResult, error in
+    /// Login with email and password - returns result via callback to shared module.
+    func loginWithEmail(email: String, password: String, callback: @escaping (Any) -> Void) {
+        Auth.auth().signIn(withEmail: email, password: password) { [weak self] authResult, error in
             DispatchQueue.main.async {
+                guard let self = self else { return }
                 if let error = error {
-                    completion(.error(self.mapFirebaseError(error)))
+                    let authException = self.mapFirebaseErrorToAuthException(error)
+                    callback(AuthResultError(exception: authException))
                     return
                 }
 
                 guard let user = authResult?.user else {
-                    completion(.error("Login failed"))
+                    callback(AuthResultError(exception: AuthException.Unknown(message: "Login failed")))
                     return
                 }
 
-                completion(.success(user.toSwiftAuthUser()))
+                callback(AuthResultSuccess(data: user.toSharedAuthUser()))
             }
         }
     }
 
-    func signInWithGoogle(idToken: String, accessToken: String?, completion: @escaping (SwiftAuthResult<SwiftAuthUser>) -> Void) {
+    /// Sign in with Google credential - returns result via callback to shared module.
+    func signInWithGoogle(idToken: String, accessToken: String?, callback: @escaping (Any) -> Void) {
         let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken ?? "")
 
-        Auth.auth().signIn(with: credential) { authResult, error in
+        Auth.auth().signIn(with: credential) { [weak self] authResult, error in
             DispatchQueue.main.async {
+                guard let self = self else { return }
                 if let error = error {
-                    completion(.error(self.mapFirebaseError(error)))
+                    let authException = self.mapFirebaseErrorToAuthException(error)
+                    callback(AuthResultError(exception: authException))
                     return
                 }
 
                 guard let user = authResult?.user else {
-                    completion(.error("Google Sign-In failed"))
+                    callback(AuthResultError(exception: AuthException.GoogleSignInFailed(message: "Google Sign-In failed")))
                     return
                 }
 
-                completion(.success(user.toSwiftAuthUser()))
+                callback(AuthResultSuccess(data: user.toSharedAuthUser()))
             }
         }
     }
 
-    func logout(completion: @escaping (SwiftAuthResult<Void>) -> Void) {
+    /// Logout the current user - returns result via callback to shared module.
+    func logout(callback: @escaping (Any) -> Void) {
         do {
             try Auth.auth().signOut()
-            completion(.success(()))
+            callback(AuthResultSuccess<KotlinUnit>(data: KotlinUnit()))
         } catch {
-            completion(.error(error.localizedDescription))
+            callback(AuthResultError(exception: AuthException.Unknown(message: error.localizedDescription)))
         }
     }
 
-    private func mapFirebaseError(_ error: Error) -> String {
-        let nsError = error as NSError
-        let errorCode = AuthErrorCode(_bridgedNSError: nsError)
+    // MARK: - Error Mapping
 
-        switch errorCode?.code {
+    /// Map Firebase errors to shared module's AuthException types.
+    private func mapFirebaseErrorToAuthException(_ error: Error) -> AuthException {
+        let nsError = error as NSError
+
+        // Check if it's a Firebase Auth error
+        guard nsError.domain == AuthErrors.domain else {
+            return AuthException.Unknown(message: error.localizedDescription)
+        }
+
+        switch AuthErrorCode(rawValue: nsError.code) {
         case .wrongPassword, .invalidCredential:
-            return "Invalid email or password"
+            return AuthException.InvalidCredentials(message: "Invalid email or password")
         case .userNotFound:
-            return "User not found"
+            return AuthException.UserNotFound(message: "User not found")
         case .emailAlreadyInUse:
-            return "Email already in use"
+            return AuthException.EmailAlreadyInUse(message: "Email already in use")
         case .weakPassword:
-            return "Password is too weak"
+            return AuthException.WeakPassword(message: "Password is too weak")
         case .networkError:
-            return "Network error occurred"
+            return AuthException.NetworkError(message: "Network error occurred")
         case .invalidEmail:
-            return "Invalid email address"
+            return AuthException.InvalidCredentials(message: "Invalid email address")
         default:
-            return error.localizedDescription
+            return AuthException.Unknown(message: error.localizedDescription)
         }
     }
 }
 
-// Extension to convert Firebase User to SwiftAuthUser just to map
+// MARK: - Firebase User Extension
+
+/// Extension to convert Firebase User to the shared module's AuthUser type.
 extension User {
-    func toSwiftAuthUser() -> SwiftAuthUser {
-        return SwiftAuthUser(
+    func toSharedAuthUser() -> AuthUser {
+        return AuthUser(
             uid: self.uid,
             email: self.email,
             displayName: self.displayName,
